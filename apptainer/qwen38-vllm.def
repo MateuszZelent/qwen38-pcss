@@ -29,7 +29,7 @@ From: vllm/vllm-openai:nightly
     # Keep the dependency set from the official vLLM image intact. Updating
     # transformers/vLLM here would make the image non-reproducible and can
     # invalidate the CUDA wheels shipped by the base image.
-    python - <<'PY'
+    python3 - <<'PY'
 import importlib.metadata
 import torch
 import vllm
@@ -42,7 +42,7 @@ print("huggingface-hub:", importlib.metadata.version("huggingface-hub"))
 PY
 
 %test
-    python - <<'PY'
+    python3 - <<'PY'
 import torch
 import vllm
 
