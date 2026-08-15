@@ -1,0 +1,57 @@
+Bootstrap: docker
+From: vllm/vllm-openai:nightly
+
+# Qwen3.8-27B is a newly released checkpoint. Use the vLLM nightly image for
+# the first compatibility run. After a successful PCSS qualification, replace
+# this tag with an immutable digest (or a known-good stable tag).
+
+%labels
+    APP_NAME qwen38-vllm
+    MODEL_ID Qwen/Qwen3.8-27B
+    API OpenAI-Responses
+    RUNTIME vLLM
+    GPU_INTERFACE Apptainer-nv
+
+%environment
+    export PYTHONUNBUFFERED=1
+    export TOKENIZERS_PARALLELISM=false
+    export HF_HUB_DISABLE_TELEMETRY=1
+    export VLLM_USAGE_SOURCE=production
+    export VLLM_WORKER_MULTIPROC_METHOD=spawn
+    export HF_HOME=${HF_HOME:-/models/.cache}
+    export HUGGINGFACE_HUB_CACHE=${HUGGINGFACE_HUB_CACHE:-/models/.cache/huggingface}
+    export TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/models/.cache/transformers}
+
+%post
+    set -eux
+    mkdir -p /models /workspace /opt/qwen38
+
+    # Keep the dependency set from the official vLLM image intact. Updating
+    # transformers/vLLM here would make the image non-reproducible and can
+    # invalidate the CUDA wheels shipped by the base image.
+    python - <<'PY'
+import importlib.metadata
+import torch
+import vllm
+
+print("vLLM:", vllm.__version__)
+print("PyTorch:", torch.__version__)
+print("CUDA compiled:", torch.version.cuda)
+print("CUDA visible during build:", torch.cuda.is_available())
+print("huggingface-hub:", importlib.metadata.version("huggingface-hub"))
+PY
+
+%test
+    python - <<'PY'
+import torch
+import vllm
+
+assert vllm.__version__, "vLLM version is empty"
+print("vLLM import OK:", vllm.__version__)
+print("CUDA available at build test:", torch.cuda.is_available())
+PY
+
+%runscript
+    # The host-side launcher passes the complete command line, including the
+    # model path, tool-call parser and context limits.
+    exec vllm serve "$@"

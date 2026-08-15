@@ -1,0 +1,11 @@
+# Merge this provider block into ~/.codex/config.toml.
+# Keep your existing Codex settings; this file is intentionally an example.
+
+model = "qwen3.8-27b"
+model_provider = "pcss-vllm"
+
+[model_providers.pcss-vllm]
+name = "PCSS H100 - Qwen3.8-27B"
+env_key = "PCSS_VLLM_API_KEY"
+base_url = "http://127.0.0.1:8000/v1"
+wire_api = "responses"

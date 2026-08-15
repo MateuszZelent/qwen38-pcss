@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Copy to qwen38-vllm.sbatch and adjust the site-specific directives.
+# Do not submit this example unchanged.
+
+#SBATCH --job-name=qwen38-vllm
+#SBATCH --gres=gpu:h100:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=96G
+#SBATCH --time=2-00:00:00
+#SBATCH --output=qwen38-vllm-%j.out
+
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR=$(cd -- "${SCRIPT_DIR}/.." && pwd)
+export PCSS_CONFIG=${PCSS_CONFIG:-"${PROJECT_DIR}/config/pcss.env"}
+
+echo "job=${SLURM_JOB_ID:-unknown}"
+echo "node=$(hostname)"
+nvidia-smi -L
+
+exec "${PROJECT_DIR}/scripts/serve-local.sh"
