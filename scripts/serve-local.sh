@@ -76,14 +76,23 @@ printf 'vLLM arguments:' >&2
 printf ' %q' "${VLLM_ARGS[@]}" >&2
 printf '\n' >&2
 
+# Support both Apptainer and the legacy Singularity environment prefixes.
 export APPTAINERENV_HF_HOME=/models/.hf-cache
+export SINGULARITYENV_HF_HOME=/models/.hf-cache
 export APPTAINERENV_HF_HUB_DISABLE_TELEMETRY=1
+export SINGULARITYENV_HF_HUB_DISABLE_TELEMETRY=1
 export APPTAINERENV_TOKENIZERS_PARALLELISM=false
+export SINGULARITYENV_TOKENIZERS_PARALLELISM=false
 export APPTAINERENV_HOME=/models/.vllm-home
+export SINGULARITYENV_HOME=/models/.vllm-home
 export APPTAINERENV_XDG_CACHE_HOME=/models/.vllm-cache
+export SINGULARITYENV_XDG_CACHE_HOME=/models/.vllm-cache
 export APPTAINERENV_FLASHINFER_WORKSPACE_BASE=/models/.vllm-cache
+export SINGULARITYENV_FLASHINFER_WORKSPACE_BASE=/models/.vllm-cache
 export APPTAINERENV_TORCHINDUCTOR_CACHE_DIR=/models/.vllm-cache/torchinductor
+export SINGULARITYENV_TORCHINDUCTOR_CACHE_DIR=/models/.vllm-cache/torchinductor
 export APPTAINERENV_TRITON_CACHE_DIR=/models/.vllm-cache/triton
+export SINGULARITYENV_TRITON_CACHE_DIR=/models/.vllm-cache/triton
 
 exec "${RUNTIME_BIN}" exec --nv \
   --bind "${MODEL_ROOT}:/models" \

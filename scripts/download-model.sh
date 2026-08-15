@@ -34,9 +34,12 @@ fi
 
 mkdir -p "${MODEL_ROOT}"
 export APPTAINERENV_HF_HOME=/models/.hf-cache
+export SINGULARITYENV_HF_HOME=/models/.hf-cache
 export APPTAINERENV_HF_HUB_DISABLE_TELEMETRY=1
+export SINGULARITYENV_HF_HUB_DISABLE_TELEMETRY=1
 if [[ -n "${HF_TOKEN:-}" ]]; then
   export APPTAINERENV_HF_TOKEN="${HF_TOKEN}"
+  export SINGULARITYENV_HF_TOKEN="${HF_TOKEN}"
 fi
 
 CONTAINER_MODEL_DIR="/models/${MODEL_SUBDIR:-Qwen3.8-27B}"
