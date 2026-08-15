@@ -19,14 +19,15 @@ który jest widoczny na węźle obliczeniowym.
 
 - `apptainer/qwen38-vllm.def` — definicja obrazu oparta na oficjalnym obrazie
   vLLM.
-- `scripts/build-image.sh` — budowanie SIF w trybie `fakeroot`, `userns` albo
-  uprzywilejowanym.
+- `scripts/build-image.sh` — budowanie SIF w trybie `fakeroot`, `userns`,
+  uprzywilejowanym albo przez wrapper administratorów PCSS.
 - `scripts/download-model.sh` — pobranie checkpointu przez
   `huggingface_hub` do scratchu.
 - `scripts/serve-local.sh` — start vLLM z parserem tool calls Qwena i
   interfejsem Responses API.
-- `slurm/qwen38-vllm.sbatch.example` — szablon joba Slurm.
-- `scripts/tunnel-ssh.sh` — tunel z komputera do węzła obliczeniowego.
+- `slurm/qwen38-vllm.sbatch` — gotowy job Slurm na jedną kartę H100.
+- `scripts/tunnel-ssh.sh` — opcjonalny helper tunelu; tunel można też wykonać
+  ręcznie.
 - `config/codex-config.toml.example` — fragment konfiguracji Codex CLI.
 
 ## Ważna uwaga o świeżo wydanym modelu
@@ -45,12 +46,9 @@ cp qwen38-pcss/config/pcss.env.example qwen38-pcss/config/pcss.env
 ${EDITOR:-vi} qwen38-pcss/config/pcss.env
 ```
 
-Wpisz przede wszystkim:
-
-- absolutną ścieżkę do scratchu dostępnego na compute node,
-- nazwę partycji i typ zasobu GPU w pliku Slurm,
-- login/host PCSS,
-- nazwę compute node po otrzymaniu alokacji.
+W repozytorium jest już konfiguracja dla tego checkoutu: model, SIF, cache i
+logi trafiają do `/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss`.
+Nie dodajemy do niej loginu ani parametrów tunelu SSH.
 
 Nie commituj `pcss.env`; plik jest przeznaczony na lokalne dane infrastruktury.
 
@@ -60,7 +58,36 @@ Na hoście, na którym dostępny jest Apptainer/Singularity:
 
 ```bash
 cd qwen38-pcss
-./scripts/build-image.sh
+bash scripts/build-image.sh
+```
+
+Skrypt wykrywa `apptainer` albo `singularity` automatycznie. Ręczny odpowiednik
+wygląda tak:
+
+```bash
+singularity build --fakeroot qwen38-vllm.sif apptainer/qwen38-vllm.def
+```
+
+Na PCSS konto użytkownika nie ma mapowania `fakeroot` (`/etc/subuid` i
+`/etc/subgid`). Administratorzy udostępniają zamiast tego polecenie
+`sudo singularity-build`, które ma tę samą składnię co `singularity build`.
+Budowanie obrazu wykonaj więc z trybem wrappera:
+
+```bash
+APPTAINER_BUILD_MODE=admin-wrapper bash scripts/build-image.sh
+```
+
+Ręczny odpowiednik:
+
+```bash
+sudo singularity-build qwen38-vllm.sif apptainer/qwen38-vllm.def
+```
+
+Jeżeli wrapper wymaga hasła, wpisz je w terminalu. Po zakończeniu sprawdź,
+czy obraz istnieje i ma właściwego właściciela:
+
+```bash
+ls -lh qwen38-vllm.sif
 ```
 
 Jeśli PCSS wymaga trybu user namespace:
@@ -87,13 +114,15 @@ Bez tokena skrypt próbuje pobrać publiczny checkpoint.
 
 ## 4. Uruchom job na H100
 
-Skopiuj szablon i dopasuj dyrektywy `#SBATCH` do PCSS:
+Job jest gotowy do zlecenia:
 
 ```bash
-cp slurm/qwen38-vllm.sbatch.example slurm/qwen38-vllm.sbatch
-${EDITOR:-vi} slurm/qwen38-vllm.sbatch
 sbatch slurm/qwen38-vllm.sbatch
 ```
+
+Domyślnie rezerwuje partycję `tesla`, `gpu:h100:1`, 8 CPU i 96 GB RAM.
+Jeśli Twoja alokacja wymaga partycji `proxima`, zmień tylko
+`#SBATCH --partition=tesla`.
 
 Na pierwszym uruchomieniu zacznij od `MAX_MODEL_LEN=32768`, jednej sekwencji
 i BF16. Dopiero po przejściu healthchecku zwiększaj kontekst do 65536 lub
@@ -106,21 +135,20 @@ Po otrzymaniu numeru joba sprawdź węzeł:
 squeue -j JOB_ID -h -o '%N'
 ```
 
-Do tunelu potrzebna będzie nazwa tego węzła.
+Do ręcznego tunelu potrzebna będzie nazwa tego węzła.
 
 ## 5. Zestaw tunel z komputera
 
-Na komputerze, z którego uruchamiasz Codex CLI, ustaw w `pcss.env`:
+Na komputerze wykonaj ręcznie tunel do przydzielonego compute node. Przykład
+z `ProxyJump` przez login PCSS:
 
 ```bash
-SSH_LOGIN=user@login.pcss.example
-SSH_COMPUTE_HOST=compute-node-from-squeue
-```
-
-Domyślny tryb używa `ProxyJump` i utrzymuje vLLM na `127.0.0.1` compute node:
-
-```bash
-./scripts/tunnel-ssh.sh
+ssh -N -T \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -J kkingstoun@eagle.man.poznan.pl \
+  -L 8000:127.0.0.1:8000 \
+  kkingstoun@NAZWA_COMPUTE_NODE
 ```
 
 Pozostaw ten proces uruchomiony. W drugim terminalu sprawdź API:
@@ -129,10 +157,7 @@ Pozostaw ten proces uruchomiony. W drugim terminalu sprawdź API:
 ./scripts/healthcheck.sh
 ```
 
-Jeśli polityka PCSS nie pozwala na SSH bezpośrednio do compute node, użyj
-`SSH_TUNNEL_MODE=login-hop` zgodnie z komentarzem w skrypcie. Ten wariant
-wymaga, żeby compute node był osiągalny z login node; nie wystawiaj portu
-vLLM do publicznej sieci.
+Serwer pozostaje na `127.0.0.1` compute node i nie jest wystawiany publicznie.
 
 ## 6. Podłącz Codex CLI
 
@@ -155,7 +180,8 @@ provider-a z pliku CLI.
 ## Kryteria gotowości
 
 1. `nvidia-smi` działa na compute node.
-2. `apptainer exec --nv qwen38-vllm.sif python -c 'import torch; ...'` widzi H100.
+2. `apptainer exec --nv qwen38-vllm.sif python -c 'import torch; ...'` (albo
+   `singularity exec --nv`) widzi H100.
 3. `GET /health` oraz `GET /v1/models` odpowiadają przez tunel.
 4. Test `POST /v1/responses` przechodzi z nazwą `qwen3.8-27b`.
 5. Codex wykonuje przynajmniej jeden bezpieczny tool call, np. odczyt pliku,

@@ -1,6 +1,10 @@
 config/pcss.env
 .apptainer-tmp/
+.apptainer-cache/
+.hf-cache/
+Qwen3.8-27B/
 qwen38-vllm.sif
+qwen38-vllm-*.log
 *.sif
 *.img
 *.sandbox/

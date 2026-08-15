@@ -5,10 +5,17 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_DIR=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 DEF_FILE=${DEF_FILE:-"${PROJECT_DIR}/apptainer/qwen38-vllm.def"}
 OUTPUT_IMAGE=${OUTPUT_IMAGE:-"${PROJECT_DIR}/qwen38-vllm.sif"}
-BUILD_MODE=${APPTAINER_BUILD_MODE:-fakeroot}
+BUILD_MODE=${APPTAINER_BUILD_MODE:-${SINGULARITY_BUILD_MODE:-fakeroot}}
+
+# PCSS exposes a privileged wrapper which is not present in the user's PATH:
+#   sudo singularity-build <IMAGE PATH> <BUILD SPEC>
+# Keep the wrapper opt-in so this script remains usable on regular Apptainer
+# installations where fakeroot or user namespaces are available.
+SUDO_BIN=${SUDO_BIN:-sudo}
+BUILD_WRAPPER=${SINGULARITY_BUILD_WRAPPER:-singularity-build}
 
 RUNTIME_BIN=${CONTAINER_RUNTIME:-}
-if [[ -z "${RUNTIME_BIN}" ]]; then
+if [[ "${BUILD_MODE}" != "admin-wrapper" && -z "${RUNTIME_BIN}" ]]; then
   if command -v apptainer >/dev/null 2>&1; then
     RUNTIME_BIN=apptainer
   elif command -v singularity >/dev/null 2>&1; then
@@ -29,6 +36,11 @@ mkdir -p "${TMP_ROOT}"
 export APPTAINER_TMPDIR="${TMP_ROOT}"
 export SINGULARITY_TMPDIR="${TMP_ROOT}"
 
+CACHE_ROOT=${APPTAINER_CACHEDIR:-"${PROJECT_DIR}/.apptainer-cache"}
+mkdir -p "${CACHE_ROOT}"
+export APPTAINER_CACHEDIR="${CACHE_ROOT}"
+export SINGULARITY_CACHEDIR="${CACHE_ROOT}"
+
 if [[ -e "${OUTPUT_IMAGE}" ]]; then
   echo "ERROR: output already exists: ${OUTPUT_IMAGE}" >&2
   echo "Move it aside or set OUTPUT_IMAGE to a new path." >&2
@@ -45,8 +57,16 @@ case "${BUILD_MODE}" in
   privileged)
     "${RUNTIME_BIN}" build "${OUTPUT_IMAGE}" "${DEF_FILE}"
     ;;
+  admin-wrapper)
+    command -v "${SUDO_BIN}" >/dev/null 2>&1 || {
+      echo "ERROR: sudo is not available: ${SUDO_BIN}" >&2
+      exit 127
+    }
+    echo "Using PCSS privileged build wrapper: ${SUDO_BIN} ${BUILD_WRAPPER}" >&2
+    "${SUDO_BIN}" "${BUILD_WRAPPER}" "${OUTPUT_IMAGE}" "${DEF_FILE}"
+    ;;
   *)
-    echo "ERROR: APPTAINER_BUILD_MODE must be fakeroot, userns, or privileged" >&2
+    echo "ERROR: APPTAINER_BUILD_MODE must be fakeroot, userns, privileged, or admin-wrapper" >&2
     exit 4
     ;;
 esac
