@@ -180,7 +180,7 @@ provider-a z pliku CLI.
 ## Kryteria gotowości
 
 1. `nvidia-smi` działa na compute node.
-2. `apptainer exec --nv qwen38-vllm.sif python -c 'import torch; ...'` (albo
+2. `apptainer exec --nv qwen38-vllm.sif python3 -c 'import torch; ...'` (albo
    `singularity exec --nv`) widzi H100.
 3. `GET /health` oraz `GET /v1/models` odpowiadają przez tunel.
 4. Test `POST /v1/responses` przechodzi z nazwą `qwen3.8-27b`.

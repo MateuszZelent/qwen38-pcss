@@ -44,7 +44,7 @@ CONTAINER_MODEL_DIR="/models/${MODEL_SUBDIR:-Qwen3.8-27B}"
 "${RUNTIME_BIN}" exec \
   --bind "${MODEL_ROOT}:/models" \
   "${SIF}" \
-  python - "${MODEL_ID}" "${CONTAINER_MODEL_DIR}" <<'PY'
+  python3 - "${MODEL_ID}" "${CONTAINER_MODEL_DIR}" <<'PY'
 import os
 import sys
 from huggingface_hub import snapshot_download
