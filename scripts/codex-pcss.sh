@@ -7,8 +7,7 @@ CONFIG_FILE=${PCSS_CONFIG:-"${PROJECT_DIR}/config/pcss.env"}
 
 [[ -f "${CONFIG_FILE}" ]] && source "${CONFIG_FILE}" || true
 
-BASE_URL=${PCSS_VLLM_BASE_URL:-"http://127.0.0.1:${LOCAL_PORT:-8000}/v1"}
-export PCSS_VLLM_API_KEY=${PCSS_VLLM_API_KEY:-dummy}
+BASE_URL=${PCSS_VLLM_BASE_URL:-"http://127.0.0.1:${LOCAL_PORT:-18000}/v1"}
 
 if command -v curl >/dev/null 2>&1; then
   curl --fail --silent --show-error "${BASE_URL}/models" >/dev/null || {
@@ -18,4 +17,5 @@ if command -v curl >/dev/null 2>&1; then
   }
 fi
 
+"${PROJECT_DIR}/scripts/setup-codex-router.sh" install
 exec codex "$@"

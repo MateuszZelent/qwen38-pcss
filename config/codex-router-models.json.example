@@ -1,0 +1,15 @@
+{
+  "models": [
+    {
+      "model": "qwen3.8-27b",
+      "slug": "qwen3.8-27b",
+      "display_name": "Qwen3.8-27B (PCSS H100)",
+      "provider": "generic-chat-completion-api",
+      "base_url": "http://127.0.0.1:18000/v1",
+      "api_key": "local-vllm-no-auth",
+      "max_context_limit": 32768,
+      "max_output_tokens": 8192,
+      "no_image_support": true
+    }
+  ]
+}

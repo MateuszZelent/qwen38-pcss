@@ -3,12 +3,12 @@
 Ten katalog przygotowuje minimalny, prywatny tor:
 
 ```text
-Codex CLI na PC                         PCSS compute node
-localhost:8000  <==== SSH tunnel ====>  127.0.0.1:8000
-                                           |
-                                           +-- Apptainer/Singularity
-                                               +-- vLLM OpenAI Responses API
-                                               +-- Qwen/Qwen3.8-27B
+Codex Desktop/CLI                       PCSS compute node
+localhost:18000 <==== SSH tunnel ====>  127.0.0.1:8000
+       |                                   |
+       +-- router localhost:8765            +-- Apptainer/Singularity
+           +-- GPT -> ChatGPT                   +-- vLLM OpenAI API
+           +-- Qwen -> vLLM                     +-- Qwen/Qwen3.8-27B
 ```
 
 Model nie powinien być wbudowywany do obrazu SIF. Obraz zawiera runtime
@@ -159,23 +159,52 @@ Pozostaw ten proces uruchomiony. W drugim terminalu sprawdź API:
 
 Serwer pozostaje na `127.0.0.1` compute node i nie jest wystawiany publicznie.
 
-## 6. Podłącz Codex CLI
+## 6. Podłącz jednocześnie GPT i Qwen do Codex
 
-Skopiuj zawartość `config/codex-config.toml.example` do swojej istniejącej
-konfiguracji `~/.codex/config.toml`, zachowując pozostałe ustawienia. Następnie:
+Nie ustawiaj `PCSS_VLLM_API_KEY` i nie przełączaj całego Codex na provider
+`pcss-vllm`. Wspólna lista modeli wymaga lokalnego routera. Router nasłuchuje
+wyłącznie na `127.0.0.1:8765`: żądania GPT przekazuje do ChatGPT z użyciem
+istniejącego logowania Codex, a `qwen3.8-27b` do tunelu vLLM na porcie 18000.
 
-```bash
-export PCSS_VLLM_API_KEY=dummy
-./scripts/codex-pcss.sh
+Pozostaw aktywny tunel SSH i sprawdź:
+
+```powershell
+curl.exe http://127.0.0.1:18000/v1/models
 ```
 
-Wartość `model` musi być identyczna z `MODEL_NAME` przekazanym do vLLM.
-Tunel daje lokalny adres `http://127.0.0.1:8000/v1`; Codex nie musi znać
-adresu PCSS.
+Zamknij Codex Desktop i uruchom w PowerShell z katalogu repo:
 
-To jest konfiguracja Codex CLI. Aplikacja desktopowa może mieć osobny cykl
-konfiguracji i nie należy zakładać, że automatycznie przejmie lokalnego
-provider-a z pliku CLI.
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\setup-codex-router.ps1
+```
+
+Instalator zachowuje dotychczasową konfigurację i zadania, generuje wspólny
+katalog GPT + Qwen, uruchamia router i tworzy odwracalną zarządzaną kopię
+Desktop z widocznym modelem niestandardowym oraz pełną historią providerów.
+
+Jeżeli Codex pochodzi z Microsoft Store, uruchamiaj utworzony launcher
+`%USERPROFILE%\.qwen38-codex\desktop-patch\launchers\Codex-Qwen-and-GPT.cmd`.
+Oryginalny pakiet Store pozostaje niezmieniony.
+
+```powershell
+# diagnostyka
+.\scripts\setup-codex-router.ps1 -Action Status
+
+# pełne wycofanie
+.\scripts\setup-codex-router.ps1 -Action Restore
+```
+
+Dla samego Codex CLI w WSL/Linux:
+
+```bash
+./scripts/setup-codex-router.sh install
+# cofnięcie: ./scripts/setup-codex-router.sh restore
+```
+
+Konfiguracja Qwen znajduje się w
+`config/codex-router-models.json.example`. Wartość `api_key` jest wyłącznie
+lokalnym znacznikiem wymaganym przez router; vLLM nie wymaga sekretu.
 
 ## Kryteria gotowości
 
@@ -186,6 +215,8 @@ provider-a z pliku CLI.
 4. Test `POST /v1/responses` przechodzi z nazwą `qwen3.8-27b`.
 5. Codex wykonuje przynajmniej jeden bezpieczny tool call, np. odczyt pliku,
    a nie tylko generuje tekst.
+6. Lista Desktop zawiera bieżące modele GPT oraz `Qwen3.8-27B (PCSS H100)`,
+   a wcześniejsze zadania pozostają widoczne.
 
 Pierwsze cztery punkty potwierdzają uruchomienie. Dopiero punkt piąty
 potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
@@ -197,3 +228,6 @@ potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
 - [Apptainer GPU support](https://apptainer.org/docs/user/main/gpu.html)
 - [Apptainer definition files](https://apptainer.org/user-docs/master/definition_files.html)
 - [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B)
+- [codex-shim](https://github.com/0xSero/codex-shim) — router GPT/BYOK (MIT).
+- [codex-deepseek-bridge](https://github.com/JetXu-LLM/codex-deepseek-bridge)
+  — źródło odwracalnej poprawki Desktop (Apache-2.0).

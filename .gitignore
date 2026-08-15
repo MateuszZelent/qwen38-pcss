@@ -12,3 +12,6 @@ qwen38-vllm-*.log
 *.sandbox/
 *.out
 *.log
+.codex-shim/
+vendor/codex-shim/.codex-shim/
+**/__pycache__/
