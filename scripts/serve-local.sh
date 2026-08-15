@@ -36,6 +36,13 @@ fi
   exit 4
 }
 
+# Keep JIT/compiler caches on the project storage. The compute-node home path
+# may not be visible inside the Apptainer namespace; FlashInfer otherwise
+# defaults to ~/.cache/flashinfer and can fail during model inspection.
+VLLM_CACHE_ROOT="${MODEL_ROOT}/.vllm-cache"
+VLLM_HOME_ROOT="${MODEL_ROOT}/.vllm-home"
+mkdir -p "${MODEL_ROOT}/.hf-cache" "${VLLM_CACHE_ROOT}" "${VLLM_HOME_ROOT}"
+
 MODEL_PATH="/models/${MODEL_SUBDIR}"
 HOST=${SERVER_HOST:-127.0.0.1}
 PORT=${REMOTE_PORT:-8000}
@@ -72,6 +79,11 @@ printf '\n' >&2
 export APPTAINERENV_HF_HOME=/models/.hf-cache
 export APPTAINERENV_HF_HUB_DISABLE_TELEMETRY=1
 export APPTAINERENV_TOKENIZERS_PARALLELISM=false
+export APPTAINERENV_HOME=/models/.vllm-home
+export APPTAINERENV_XDG_CACHE_HOME=/models/.vllm-cache
+export APPTAINERENV_FLASHINFER_WORKSPACE_BASE=/models/.vllm-cache
+export APPTAINERENV_TORCHINDUCTOR_CACHE_DIR=/models/.vllm-cache/torchinductor
+export APPTAINERENV_TRITON_CACHE_DIR=/models/.vllm-cache/triton
 
 exec "${RUNTIME_BIN}" exec --nv \
   --bind "${MODEL_ROOT}:/models" \
