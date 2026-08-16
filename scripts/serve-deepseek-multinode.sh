@@ -86,8 +86,10 @@ nvidia-smi -L
 
 for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_HF_HOME=/models/.hf-cache"
-  export "${prefix}_HOME=/models/.vllm-home"
   export "${prefix}_XDG_CACHE_HOME=/models/.vllm-cache"
+  export "${prefix}_FLASHINFER_WORKSPACE_BASE=/models/.vllm-cache"
+  export "${prefix}_TORCHINDUCTOR_CACHE_DIR=/models/.vllm-cache/torchinductor"
+  export "${prefix}_TRITON_CACHE_DIR=/models/.vllm-cache/triton"
   export "${prefix}_TOKENIZERS_PARALLELISM=false"
   export "${prefix}_VLLM_HOST_IP=${NODE_IP}"
   export "${prefix}_NCCL_DEBUG=${NCCL_DEBUG:-INFO}"
