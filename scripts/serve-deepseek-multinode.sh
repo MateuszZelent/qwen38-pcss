@@ -12,6 +12,16 @@ CONFIG_FILE=${PCSS_CONFIG:-"${PROJECT_DIR}/config/deepseek-v4-pro.env"}
 # shellcheck disable=SC1090
 source "${CONFIG_FILE}"
 
+# The upstream H200 profile performs a 16K-token dummy forward that needs
+# roughly 42 GiB of temporary memory. On 94 GiB H100s the weights already use
+# about 82 GiB, so qualify the base model with a small profiling batch and no
+# speculative draft. This override intentionally also protects older local
+# env files that still contain the original H200-oriented values.
+if [[ "${H100_SAFE_PROFILE:-1}" == 1 ]]; then
+  MAX_NUM_BATCHED_TOKENS=${H100_SAFE_MAX_NUM_BATCHED_TOKENS:-512}
+  SPECULATIVE_CONFIG=
+fi
+
 : "${SLURM_NNODES:?run this launcher through the multi-node Slurm job}"
 : "${SLURM_NODEID:?SLURM_NODEID is required}"
 : "${MASTER_ADDR:?MASTER_ADDR is required}"
@@ -98,6 +108,7 @@ fi
 [[ "${DISABLE_FLASHINFER_AUTOTUNE:-1}" == 1 ]] && VLLM_ARGS+=(--no-enable-flashinfer-autotune)
 
 echo "node_id=${SLURM_NODEID} host=${NODE_HOST} ip=${NODE_IP} master=${MASTER_ADDR} dp=${DP_SIZE} local_dp=${GPUS_LOCAL} start_rank=${DP_START_RANK}" >&2
+echo "memory_profile=h100-safe max_num_batched_tokens=${MAX_NUM_BATCHED_TOKENS:-unset} speculative=$([[ -n "${SPECULATIVE_CONFIG:-}" ]] && echo enabled || echo disabled)" >&2
 nvidia-smi -L
 
 for prefix in APPTAINERENV SINGULARITYENV; do

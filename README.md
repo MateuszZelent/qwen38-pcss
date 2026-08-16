@@ -294,6 +294,13 @@ węzła dla konkretnego joba. Nie wolno przenosić ich na współdzielony NFS:
 równoległa kompilacja przez 16 rang może wtedy powodować `Stale file handle`
 i asercję DeepGEMM `runtime != nullptr`.
 
+Domyślny profil 16xH100 uruchamia pierwszy preflight z
+`MAX_NUM_BATCHED_TOKENS=512` i bez DSpark. Wagi zajmują około 82 GiB na każdej
+H100; wartość 16384 z recepty H200 powoduje podczas dummy-run próbę dodatkowej
+alokacji około 42 GiB i kończy się OOM. Po potwierdzeniu zdrowego API można
+ustawić `H100_SAFE_PROFILE=0`, włączyć DSpark i stopniowo podnosić batch albo
+przejść na osiem węzłów.
+
 Pierwsze cztery punkty potwierdzają uruchomienie. Dopiero punkt piąty
 potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
 
