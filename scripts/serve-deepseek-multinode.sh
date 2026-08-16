@@ -62,7 +62,21 @@ NODE_IP=${VLLM_HOST_IP:-$(getent ahostsv4 "$(hostname -s)" | awk 'NR == 1 {print
 # the same Triton/DeepGEMM artifacts concurrently and can produce stale file
 # handles or partially loaded runtimes. Processes on one node may safely share
 # the local filesystem cache and its normal locking semantics.
-LOCAL_JIT_ROOT="${TMPDIR:-/tmp}/vllm-deepseek-${SLURM_JOB_ID}-${SLURM_NODEID}"
+# The sbatch file requests PCSS local NVMe with --constraint=local_ssd and
+# --tmp. SLURM exposes the isolated job directory through TMPDIR on each node.
+: "${TMPDIR:?PCSS did not provide TMPDIR; submit with --constraint=local_ssd and --tmp}"
+[[ -d "${TMPDIR}" && -w "${TMPDIR}" ]] || {
+  echo "ERROR: SLURM TMPDIR is not a writable directory: ${TMPDIR}" >&2
+  exit 6
+}
+TMP_FS=$(stat -f -c %T "${TMPDIR}")
+case "${TMP_FS}" in
+  nfs|nfs4|lustre|gpfs|cifs|smb2)
+    echo "ERROR: TMPDIR must be node-local, but ${TMPDIR} uses ${TMP_FS}" >&2
+    exit 6
+    ;;
+esac
+LOCAL_JIT_ROOT="${TMPDIR}/vllm-deepseek-${SLURM_JOB_ID}-${SLURM_NODEID}"
 mkdir -p \
   "${LOCAL_JIT_ROOT}/flashinfer" \
   "${LOCAL_JIT_ROOT}/torchinductor" \
@@ -109,6 +123,7 @@ fi
 
 echo "node_id=${SLURM_NODEID} host=${NODE_HOST} ip=${NODE_IP} master=${MASTER_ADDR} dp=${DP_SIZE} local_dp=${GPUS_LOCAL} start_rank=${DP_START_RANK}" >&2
 echo "memory_profile=h100-safe max_num_batched_tokens=${MAX_NUM_BATCHED_TOKENS:-unset} speculative=$([[ -n "${SPECULATIVE_CONFIG:-}" ]] && echo enabled || echo disabled)" >&2
+echo "jit_cache=${LOCAL_JIT_ROOT} filesystem=${TMP_FS}" >&2
 nvidia-smi -L
 
 for prefix in APPTAINERENV SINGULARITYENV; do
@@ -129,6 +144,6 @@ done
 
 exec "${RUNTIME_BIN}" exec --nv \
   --bind "${MODEL_ROOT}:/models" \
-  --bind /dev/shm:/dev/shm \
+  --bind "${TMPDIR}:${TMPDIR}" \
   "${SIF}" \
   vllm "${VLLM_ARGS[@]}"

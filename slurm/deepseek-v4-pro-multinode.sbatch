@@ -13,6 +13,8 @@
 #SBATCH --cpus-per-task=56
 #SBATCH --mem=700G
 #SBATCH --exclusive
+#SBATCH --constraint=local_ssd
+#SBATCH --tmp=200G
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss
 #SBATCH --output=/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss/deepseek-v4-pro-%j.log
