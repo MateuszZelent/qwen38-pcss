@@ -36,4 +36,4 @@ exec srun --nodes="${SLURM_NNODES}" \
   --ntasks="${SLURM_NNODES}" \
   --ntasks-per-node=1 \
   --kill-on-bad-exit=1 \
-  "${PROJECT_DIR}/scripts/serve-deepseek-multinode.sh"
+  bash "${PROJECT_DIR}/scripts/serve-deepseek-multinode.sh"
