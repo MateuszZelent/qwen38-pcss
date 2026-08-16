@@ -296,6 +296,9 @@ równoległa kompilacja przez 16 rang może wtedy powodować `Stale file handle`
 i asercję DeepGEMM `runtime != nullptr`.
 TileLang nie respektuje samego `XDG_CACHE_HOME`, dlatego launcher ustawia jawnie
 `TILELANG_CACHE_DIR` oraz `TILELANG_TMP_DIR` pod lokalnym `TMPDIR`.
+Profil H100 wyłącza też selektor `VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER`, ponieważ
+jego ścieżka dla małych macierzy ma wyścig cold-cache podczas równoległego
+rozruchu DeepSeek-V4-Pro. Pozostałe operacje nadal korzystają z DeepGEMM.
 
 Domyślny profil 16xH100 uruchamia pierwszy preflight z
 `MAX_NUM_BATCHED_TOKENS=512` i bez DSpark. Wagi zajmują około 82 GiB na każdej

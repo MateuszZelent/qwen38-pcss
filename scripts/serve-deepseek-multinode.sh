@@ -138,6 +138,10 @@ for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_TILELANG_CACHE_DIR=${LOCAL_JIT_ROOT}/tilelang/cache"
   export "${prefix}_TILELANG_TMP_DIR=${LOCAL_JIT_ROOT}/tilelang/tmp"
   export "${prefix}_DG_JIT_CACHE_DIR=${LOCAL_JIT_ROOT}/deep_gemm"
+  # Avoid the known H100 cold-cache race in FlashInfer's block-FP8 GEMM
+  # selected for M < 32 during DeepSeek-V4-Pro warmup/cudagraph capture.
+  # Pure DeepGEMM remains enabled through DG_JIT_CACHE_DIR above.
+  export "${prefix}_VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER=${VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER:-0}"
   export "${prefix}_TOKENIZERS_PARALLELISM=false"
   export "${prefix}_VLLM_HOST_IP=${NODE_IP}"
   export "${prefix}_NCCL_DEBUG=${NCCL_DEBUG:-INFO}"
