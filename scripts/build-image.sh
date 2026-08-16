@@ -3,8 +3,23 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_DIR=$(cd -- "${SCRIPT_DIR}/.." && pwd)
-DEF_FILE=${DEF_FILE:-"${PROJECT_DIR}/apptainer/qwen38-vllm.def"}
-OUTPUT_IMAGE=${OUTPUT_IMAGE:-"${PROJECT_DIR}/qwen38-vllm.sif"}
+IMAGE_PROFILE=${IMAGE_PROFILE:-qwen38}
+case "${IMAGE_PROFILE}" in
+  qwen38)
+    DEFAULT_DEF="${PROJECT_DIR}/apptainer/qwen38-vllm.def"
+    DEFAULT_OUTPUT="${PROJECT_DIR}/qwen38-vllm.sif"
+    ;;
+  deepseek-v4-pro)
+    DEFAULT_DEF="${PROJECT_DIR}/apptainer/deepseek-v4-vllm.def"
+    DEFAULT_OUTPUT="${PROJECT_DIR}/deepseek-v4-vllm.sif"
+    ;;
+  *)
+    echo "ERROR: IMAGE_PROFILE must be qwen38 or deepseek-v4-pro" >&2
+    exit 4
+    ;;
+esac
+DEF_FILE=${DEF_FILE:-"${DEFAULT_DEF}"}
+OUTPUT_IMAGE=${OUTPUT_IMAGE:-"${DEFAULT_OUTPUT}"}
 BUILD_MODE=${APPTAINER_BUILD_MODE:-${SINGULARITY_BUILD_MODE:-fakeroot}}
 
 # PCSS exposes a privileged wrapper which is not present in the user's PATH:

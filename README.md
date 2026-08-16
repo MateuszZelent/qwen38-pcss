@@ -227,6 +227,41 @@ lokalnym znacznikiem wymaganym przez router; vLLM nie wymaga sekretu.
 6. Lista Desktop zawiera bieżące modele GPT oraz `Qwen3.8-27B (PCSS H100)`,
    a wcześniejsze zadania pozostają widoczne.
 
+## Eksperyment: DeepSeek-V4-Pro na wielu węzłach PCSS
+
+DeepSeek-V4-Pro-0813 ma checkpoint około 893 GB i nie mieści się na jednym
+węźle 4xH100. Osobny profil `slurm/deepseek-v4-pro-multinode.sbatch` rezerwuje
+domyślnie cztery węzły (16 H100) i uruchamia DP=16 z Expert Parallel. Pierwszy
+węzeł wystawia API wyłącznie na loopback, pozostałe działają headless.
+
+```bash
+cp config/deepseek-v4-pro.env.example config/deepseek-v4-pro.env
+${EDITOR:-vi} config/deepseek-v4-pro.env
+
+APPTAINER_BUILD_MODE=admin-wrapper \
+  IMAGE_PROFILE=deepseek-v4-pro \
+  bash scripts/build-image.sh
+
+PCSS_CONFIG="$PWD/config/deepseek-v4-pro.env" bash scripts/download-model.sh
+sbatch slurm/deepseek-v4-pro-multinode.sbatch
+```
+
+Jeśli preflight lub ładowanie wag zakończy się OOM, użyj ośmiu węzłów bez
+zmiany plików:
+
+```bash
+sbatch --nodes=8 slurm/deepseek-v4-pro-multinode.sbatch
+```
+
+Po starcie odczytaj pierwszy węzeł z logu (`api_node=...`) i zestaw tunel z
+lokalnego portu 18001 do portu 8001 tego węzła. Nie kieruj tunelu do dowolnego
+workera: endpoint HTTP istnieje tylko na pierwszym węźle.
+
+Profil jest celowo oddzielony od działającego Qwen3.8-27B. Ma osobny obraz,
+checkpoint, port i plik konfiguracyjny. Przed uznaniem wdrożenia za gotowe log
+NCCL musi potwierdzić transport InfiniBand/GDRDMA, a testy `/health`,
+`/v1/models`, chat/tool call i Responses API muszą przejść przez tunel.
+
 Pierwsze cztery punkty potwierdzają uruchomienie. Dopiero punkt piąty
 potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
 
