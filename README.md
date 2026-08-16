@@ -289,6 +289,10 @@ Profil jest celowo oddzielony od działającego Qwen3.8-27B. Ma osobny obraz,
 checkpoint, port i plik konfiguracyjny. Przed uznaniem wdrożenia za gotowe log
 NCCL musi potwierdzić transport InfiniBand/GDRDMA, a testy `/health`,
 `/v1/models`, chat/tool call i Responses API muszą przejść przez tunel.
+Katalogi JIT Triton, TileLang i DeepGEMM są tworzone lokalnie w `/tmp` każdego
+węzła dla konkretnego joba. Nie wolno przenosić ich na współdzielony NFS:
+równoległa kompilacja przez 16 rang może wtedy powodować `Stale file handle`
+i asercję DeepGEMM `runtime != nullptr`.
 
 Pierwsze cztery punkty potwierdzają uruchomienie. Dopiero punkt piąty
 potwierdza, że parser tool calls i Responses API są zgodne z Codexem.

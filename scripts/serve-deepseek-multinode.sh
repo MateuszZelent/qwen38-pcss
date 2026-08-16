@@ -23,7 +23,6 @@ GPUS_LOCAL=${GPUS_PER_NODE:-4}
 DP_SIZE=$((SLURM_NNODES * GPUS_LOCAL))
 DP_START_RANK=$((SLURM_NODEID * GPUS_LOCAL))
 MODEL_PATH="/models/${MODEL_SUBDIR}"
-VLLM_CACHE_ROOT="${MODEL_ROOT}/.vllm-cache"
 VLLM_HOME_ROOT="${MODEL_ROOT}/.vllm-home"
 
 if command -v apptainer >/dev/null 2>&1; then
@@ -40,7 +39,7 @@ fi
   echo "ERROR: model directory not found: ${MODEL_ROOT}/${MODEL_SUBDIR}" >&2
   exit 4
 }
-mkdir -p "${MODEL_ROOT}/.hf-cache" "${VLLM_CACHE_ROOT}" "${VLLM_HOME_ROOT}"
+mkdir -p "${MODEL_ROOT}/.hf-cache" "${VLLM_HOME_ROOT}"
 
 NODE_HOST=$(hostname -f 2>/dev/null || hostname)
 NODE_IP=${VLLM_HOST_IP:-$(getent ahostsv4 "$(hostname -s)" | awk 'NR == 1 {print $1}')}
@@ -48,6 +47,17 @@ NODE_IP=${VLLM_HOST_IP:-$(getent ahostsv4 "$(hostname -s)" | awk 'NR == 1 {print
   echo "ERROR: cannot determine this node's IPv4 address; set VLLM_HOST_IP" >&2
   exit 5
 }
+
+# JIT caches must be node-local. A shared NFS cache lets 16 ranks overwrite
+# the same Triton/DeepGEMM artifacts concurrently and can produce stale file
+# handles or partially loaded runtimes. Processes on one node may safely share
+# the local filesystem cache and its normal locking semantics.
+LOCAL_JIT_ROOT="${TMPDIR:-/tmp}/vllm-deepseek-${SLURM_JOB_ID}-${SLURM_NODEID}"
+mkdir -p \
+  "${LOCAL_JIT_ROOT}/flashinfer" \
+  "${LOCAL_JIT_ROOT}/torchinductor" \
+  "${LOCAL_JIT_ROOT}/triton" \
+  "${LOCAL_JIT_ROOT}/deep_gemm"
 VLLM_ARGS=(
   serve "${MODEL_PATH}"
   --served-model-name "${MODEL_NAME:-deepseek-v4-pro}"
@@ -92,10 +102,12 @@ nvidia-smi -L
 
 for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_HF_HOME=/models/.hf-cache"
-  export "${prefix}_XDG_CACHE_HOME=/models/.vllm-cache"
-  export "${prefix}_FLASHINFER_WORKSPACE_BASE=/models/.vllm-cache"
-  export "${prefix}_TORCHINDUCTOR_CACHE_DIR=/models/.vllm-cache/torchinductor"
-  export "${prefix}_TRITON_CACHE_DIR=/models/.vllm-cache/triton"
+  export "${prefix}_XDG_CACHE_HOME=${LOCAL_JIT_ROOT}"
+  export "${prefix}_VLLM_CACHE_ROOT=${LOCAL_JIT_ROOT}"
+  export "${prefix}_FLASHINFER_WORKSPACE_BASE=${LOCAL_JIT_ROOT}/flashinfer"
+  export "${prefix}_TORCHINDUCTOR_CACHE_DIR=${LOCAL_JIT_ROOT}/torchinductor"
+  export "${prefix}_TRITON_CACHE_DIR=${LOCAL_JIT_ROOT}/triton"
+  export "${prefix}_DG_JIT_CACHE_DIR=${LOCAL_JIT_ROOT}/deep_gemm"
   export "${prefix}_TOKENIZERS_PARALLELISM=false"
   export "${prefix}_VLLM_HOST_IP=${NODE_IP}"
   export "${prefix}_NCCL_DEBUG=${NCCL_DEBUG:-INFO}"
