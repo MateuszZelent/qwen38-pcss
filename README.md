@@ -120,16 +120,17 @@ Job jest gotowy do zlecenia:
 sbatch slurm/qwen38-vllm.sbatch
 ```
 
-Domyślnie rezerwuje partycję `tesla`, `gpu:h100:1`, 8 CPU i 96 GB RAM.
+Profil full-power rezerwuje partycję `tesla`, `gpu:h100:4`, 32 CPU i 256 GB
+RAM.
 Jeśli Twoja alokacja wymaga partycji `proxima`, zmień tylko
 `#SBATCH --partition=tesla`.
 
-Checkpoint deklaruje natywny kontekst 262144 tokenów. Na H100 94 GiB pomiar
-vLLM dla BF16 wykazał 51,1 GiB na model oraz 30,4 GiB dostępnego KV cache
-(433493 tokeny), dlatego profil jednej sekwencji używa
-`MAX_MODEL_LEN=262144`, `MAX_NUM_SEQS=1` i jednej GPU. Cztery H100 nie są
-potrzebne dla natywnego kontekstu; mogą być przydatne dopiero dla większej
-równoległości albo eksperymentalnego kontekstu ponad 262144 z YaRN.
+Checkpoint deklaruje natywny kontekst 262144 tokenów i wspiera rozszerzenie do
+1010000. Profil full-power używa czterech H100 w TP=4, wag BF16, KV cache BF16,
+`MAX_NUM_SEQS=1`, prefix caching, chunked prefill oraz wbudowanego MTP z trzema
+tokenami draftu. Rozszerzenie jest przekazywane przez zagnieżdżone
+`HF_OVERRIDES` zgodnie z receptą Qwen3.8 vLLM. Jest to profil maksymalnej jakości
+dla jednego interaktywnego użytkownika; nie używa kwantyzacji FP8/NVFP4.
 
 Po otrzymaniu numeru joba sprawdź węzeł:
 

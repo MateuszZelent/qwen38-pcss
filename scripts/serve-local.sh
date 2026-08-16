@@ -70,6 +70,8 @@ fi
 [[ "${ENABLE_PREFIX_CACHING:-0}" == 1 ]] && VLLM_ARGS+=(--enable-prefix-caching)
 [[ "${ENABLE_CHUNKED_PREFILL:-0}" == 1 ]] && VLLM_ARGS+=(--enable-chunked-prefill)
 [[ -n "${MAX_NUM_BATCHED_TOKENS:-}" ]] && VLLM_ARGS+=(--max-num-batched-tokens "${MAX_NUM_BATCHED_TOKENS}")
+[[ -n "${HF_OVERRIDES:-}" ]] && VLLM_ARGS+=(--hf-overrides "${HF_OVERRIDES}")
+[[ -n "${SPECULATIVE_CONFIG:-}" ]] && VLLM_ARGS+=(--speculative-config "${SPECULATIVE_CONFIG}")
 
 echo "Starting ${MODEL_ALIAS} on ${HOST}:${PORT}" >&2
 printf 'vLLM arguments:' >&2

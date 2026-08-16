@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Qwen3.8-27B server on one H100. Submit from the project tree with:
+# Qwen3.8-27B full-power server on four H100 GPUs. Submit with:
 #   sbatch slurm/qwen38-vllm.sbatch
 
 # PCSS exposes H100 nodes in the tesla partition. Use proxima instead only if
 # your local allocation policy requires it.
 #SBATCH --partition=tesla
 #SBATCH --job-name=qwen38-vllm
-#SBATCH --gres=gpu:h100:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=96G
+#SBATCH --gres=gpu:h100:4
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=256G
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir=/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss
 #SBATCH --output=/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss/qwen38-vllm-%j.log
