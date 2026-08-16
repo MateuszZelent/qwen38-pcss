@@ -3,6 +3,7 @@ param(
     [ValidateSet('Install', 'Status', 'Restore')]
     [string]$Action = 'Install',
     [string]$VllmBaseUrl = 'http://127.0.0.1:18000/v1',
+    [string]$DeepSeekBaseUrl = 'http://127.0.0.1:18001/v1',
     [int]$RouterPort = 8765,
     [switch]$SkipDesktopPatch
 )
@@ -75,7 +76,13 @@ if ($LASTEXITCODE -ne 0) {
 
 New-Item -ItemType Directory -Force -Path $SettingsDir | Out-Null
 $settings = Get-Content -Raw (Join-Path $ProjectDir 'config\codex-router-models.json.example') | ConvertFrom-Json
-$settings.models[0].base_url = $VllmBaseUrl.TrimEnd('/')
+foreach ($model in $settings.models) {
+    if ($model.slug -eq 'qwen3.8-27b') {
+        $model.base_url = $VllmBaseUrl.TrimEnd('/')
+    } elseif ($model.slug -eq 'deepseek-v4-pro') {
+        $model.base_url = $DeepSeekBaseUrl.TrimEnd('/')
+    }
+}
 $settings | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 $SettingsPath
 
 Invoke-Shim @('enable')
@@ -93,4 +100,4 @@ if (-not $SkipDesktopPatch) {
 }
 
 Write-Host "Router dziala na http://127.0.0.1:$RouterPort/v1"
-Write-Host 'Uruchom ponownie Codex Desktop. GPT i Qwen powinny byc dostepne z jednej listy.'
+Write-Host 'Uruchom ponownie Codex Desktop. GPT, Qwen i DeepSeek powinny byc dostepne z jednej listy.'

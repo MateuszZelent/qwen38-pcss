@@ -257,6 +257,34 @@ Po starcie odczytaj pierwszy węzeł z logu (`api_node=...`) i zestaw tunel z
 lokalnego portu 18001 do portu 8001 tego węzła. Nie kieruj tunelu do dowolnego
 workera: endpoint HTTP istnieje tylko na pierwszym węźle.
 
+Oba modele można tunelować jednym helperem. Nazwę węzła Qwena odczytaj przez
+`squeue`, a nazwę głównego węzła DeepSeeka z `api_node` w jego logu:
+
+```bash
+bash scripts/tunnel-models-ssh.sh QWEN_NODE DEEPSEEK_API_NODE
+```
+
+Helper wystawia lokalnie Qwena na `127.0.0.1:18000` i DeepSeeka na
+`127.0.0.1:18001`. Jeśli oba serwery są na tym samym węźle, używa jednego
+połączenia SSH; jeśli na różnych, utrzymuje dwa połączenia przez ten sam
+`ProxyJump`.
+
+Po uruchomieniu tuneli ponownie wykonaj instalator routera Codex. Zachowuje on
+modele GPT i dodaje oba modele PCSS do wspólnego selektora:
+
+```bash
+# WSL / Codex CLI
+bash scripts/setup-codex-router.sh install
+
+# Windows PowerShell / Codex Desktop
+.\scripts\setup-codex-router.ps1
+```
+
+DeepSeek pojawia się jako `DeepSeek-V4-Pro-0813 (PCSS 16xH100)` z limitem
+200000 tokenów. Jego obecność na liście nie wymaga, aby job był stale aktywny;
+próba użycia modelu bez działającego tunelu zwróci błąd połączenia, nie usuwa
+jednak GPT, Qwena ani historii zadań.
+
 Profil jest celowo oddzielony od działającego Qwen3.8-27B. Ma osobny obraz,
 checkpoint, port i plik konfiguracyjny. Przed uznaniem wdrożenia za gotowe log
 NCCL musi potwierdzić transport InfiniBand/GDRDMA, a testy `/health`,
