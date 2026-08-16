@@ -294,6 +294,8 @@ Katalogi JIT Triton, TileLang i DeepGEMM są tworzone w przydzielonym przez SLUR
 `TMPDIR` każdego węzła dla konkretnego joba. Nie wolno przenosić ich na współdzielony NFS:
 równoległa kompilacja przez 16 rang może wtedy powodować `Stale file handle`
 i asercję DeepGEMM `runtime != nullptr`.
+TileLang nie respektuje samego `XDG_CACHE_HOME`, dlatego launcher ustawia jawnie
+`TILELANG_CACHE_DIR` oraz `TILELANG_TMP_DIR` pod lokalnym `TMPDIR`.
 
 Domyślny profil 16xH100 uruchamia pierwszy preflight z
 `MAX_NUM_BATCHED_TOKENS=512` i bez DSpark. Wagi zajmują około 82 GiB na każdej

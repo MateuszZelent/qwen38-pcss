@@ -81,6 +81,8 @@ mkdir -p \
   "${LOCAL_JIT_ROOT}/flashinfer" \
   "${LOCAL_JIT_ROOT}/torchinductor" \
   "${LOCAL_JIT_ROOT}/triton" \
+  "${LOCAL_JIT_ROOT}/tilelang/cache" \
+  "${LOCAL_JIT_ROOT}/tilelang/tmp" \
   "${LOCAL_JIT_ROOT}/deep_gemm"
 VLLM_ARGS=(
   serve "${MODEL_PATH}"
@@ -123,7 +125,7 @@ fi
 
 echo "node_id=${SLURM_NODEID} host=${NODE_HOST} ip=${NODE_IP} master=${MASTER_ADDR} dp=${DP_SIZE} local_dp=${GPUS_LOCAL} start_rank=${DP_START_RANK}" >&2
 echo "memory_profile=h100-safe max_num_batched_tokens=${MAX_NUM_BATCHED_TOKENS:-unset} speculative=$([[ -n "${SPECULATIVE_CONFIG:-}" ]] && echo enabled || echo disabled)" >&2
-echo "jit_cache=${LOCAL_JIT_ROOT} filesystem=${TMP_FS}" >&2
+echo "jit_cache=${LOCAL_JIT_ROOT} filesystem=${TMP_FS} tilelang_cache=${LOCAL_JIT_ROOT}/tilelang/cache" >&2
 nvidia-smi -L
 
 for prefix in APPTAINERENV SINGULARITYENV; do
@@ -133,6 +135,8 @@ for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_FLASHINFER_WORKSPACE_BASE=${LOCAL_JIT_ROOT}/flashinfer"
   export "${prefix}_TORCHINDUCTOR_CACHE_DIR=${LOCAL_JIT_ROOT}/torchinductor"
   export "${prefix}_TRITON_CACHE_DIR=${LOCAL_JIT_ROOT}/triton"
+  export "${prefix}_TILELANG_CACHE_DIR=${LOCAL_JIT_ROOT}/tilelang/cache"
+  export "${prefix}_TILELANG_TMP_DIR=${LOCAL_JIT_ROOT}/tilelang/tmp"
   export "${prefix}_DG_JIT_CACHE_DIR=${LOCAL_JIT_ROOT}/deep_gemm"
   export "${prefix}_TOKENIZERS_PARALLELISM=false"
   export "${prefix}_VLLM_HOST_IP=${NODE_IP}"
