@@ -72,6 +72,7 @@ fi
 [[ -n "${MAX_NUM_BATCHED_TOKENS:-}" ]] && VLLM_ARGS+=(--max-num-batched-tokens "${MAX_NUM_BATCHED_TOKENS}")
 [[ -n "${HF_OVERRIDES:-}" ]] && VLLM_ARGS+=(--hf-overrides "${HF_OVERRIDES}")
 [[ -n "${SPECULATIVE_CONFIG:-}" ]] && VLLM_ARGS+=(--speculative-config "${SPECULATIVE_CONFIG}")
+[[ "${DISABLE_CUSTOM_ALL_REDUCE:-0}" == 1 ]] && VLLM_ARGS+=(--disable-custom-all-reduce)
 
 echo "Starting ${MODEL_ALIAS} on ${HOST}:${PORT}" >&2
 printf 'vLLM arguments:' >&2

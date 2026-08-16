@@ -131,6 +131,10 @@ Checkpoint deklaruje natywny kontekst 262144 tokenów i wspiera rozszerzenie do
 tokenami draftu. Rozszerzenie jest przekazywane przez zagnieżdżone
 `HF_OVERRIDES` zgodnie z receptą Qwen3.8 vLLM. Jest to profil maksymalnej jakości
 dla jednego interaktywnego użytkownika; nie używa kwantyzacji FP8/NVFP4.
+Draft MTP jest jawnie ograniczony do natywnych 262144 tokenów, więc powyżej
+tego progu vLLM pomija spekulację i nadal obsługuje pełny target 1M. Na PCSS
+wyłączony jest własny custom all-reduce vLLM na rzecz NCCL, ponieważ węzły nie
+udostępniają kompletnej topologii P2P wewnątrz alokacji.
 
 Po otrzymaniu numeru joba sprawdź węzeł:
 
