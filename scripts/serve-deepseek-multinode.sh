@@ -59,7 +59,6 @@ VLLM_ARGS=(
   --max-num-seqs "${MAX_NUM_SEQS:-1}"
   --data-parallel-size "${DP_SIZE}"
   --data-parallel-size-local "${GPUS_LOCAL}"
-  --data-parallel-start-rank "${DP_START_RANK}"
   --data-parallel-address "${MASTER_ADDR}"
   --data-parallel-rpc-port "${DP_RPC_PORT:-13345}"
   --tensor-parallel-size 1
@@ -67,9 +66,16 @@ VLLM_ARGS=(
 )
 
 if [[ "${SLURM_NODEID}" == 0 ]]; then
-  VLLM_ARGS+=(--host "${SERVER_HOST:-127.0.0.1}" --port "${REMOTE_PORT:-8001}")
+  # Rank zero owns the single internal-LB API endpoint. Passing an explicit
+  # start rank (even zero) makes vLLM 0.27 infer hybrid-LB mode, which is
+  # incompatible with headless remote nodes.
+  VLLM_ARGS+=(
+    --api-server-count 1
+    --host "${SERVER_HOST:-127.0.0.1}"
+    --port "${REMOTE_PORT:-8001}"
+  )
 else
-  VLLM_ARGS+=(--headless)
+  VLLM_ARGS+=(--data-parallel-start-rank "${DP_START_RANK}" --headless)
 fi
 [[ "${ENABLE_EXPERT_PARALLEL:-1}" == 1 ]] && VLLM_ARGS+=(--enable-expert-parallel)
 [[ "${ENABLE_AUTO_TOOL_CHOICE:-1}" == 1 ]] && VLLM_ARGS+=(--enable-auto-tool-choice)
