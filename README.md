@@ -124,10 +124,12 @@ Domyślnie rezerwuje partycję `tesla`, `gpu:h100:1`, 8 CPU i 96 GB RAM.
 Jeśli Twoja alokacja wymaga partycji `proxima`, zmień tylko
 `#SBATCH --partition=tesla`.
 
-Na pierwszym uruchomieniu zacznij od `MAX_MODEL_LEN=32768`, jednej sekwencji
-i BF16. Dopiero po przejściu healthchecku zwiększaj kontekst do 65536 lub
-więcej. H100 powinien pozwolić na model w pełnej precyzji, ale dokładny limit
-zależy od wariantu H100, dostępnej pamięci i konfiguracji KV cache.
+Checkpoint deklaruje natywny kontekst 262144 tokenów. Na H100 94 GiB pomiar
+vLLM dla BF16 wykazał 51,1 GiB na model oraz 30,4 GiB dostępnego KV cache
+(433493 tokeny), dlatego profil jednej sekwencji używa
+`MAX_MODEL_LEN=262144`, `MAX_NUM_SEQS=1` i jednej GPU. Cztery H100 nie są
+potrzebne dla natywnego kontekstu; mogą być przydatne dopiero dla większej
+równoległości albo eksperymentalnego kontekstu ponad 262144 z YaRN.
 
 Po otrzymaniu numeru joba sprawdź węzeł:
 
