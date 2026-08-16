@@ -144,10 +144,12 @@ z `ProxyJump` przez login PCSS:
 
 ```bash
 ssh -N -T \
+  -o GSSAPIAuthentication=no \
+  -o PreferredAuthentications=publickey \
   -o ExitOnForwardFailure=yes \
   -o ServerAliveInterval=30 \
   -J kkingstoun@eagle.man.poznan.pl \
-  -L 8000:127.0.0.1:8000 \
+  -L 127.0.0.1:18000:127.0.0.1:8000 \
   kkingstoun@NAZWA_COMPUTE_NODE
 ```
 

@@ -13,13 +13,15 @@ CONFIG_FILE=${PCSS_CONFIG:-"${PROJECT_DIR}/config/pcss.env"}
 source "${CONFIG_FILE}"
 
 : "${SSH_LOGIN:?SSH_LOGIN is required}"
-LOCAL=${LOCAL_PORT:-8000}
+LOCAL=${LOCAL_PORT:-18000}
 REMOTE=${REMOTE_PORT:-8000}
 MODE=${SSH_TUNNEL_MODE:-proxyjump}
 
 SSH_COMMON=(
   -N -T
   -o ExitOnForwardFailure=yes
+  -o GSSAPIAuthentication=no
+  -o PreferredAuthentications=publickey
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=3
   -o TCPKeepAlive=yes
@@ -31,7 +33,7 @@ case "${MODE}" in
     COMPUTE_USER=${SSH_COMPUTE_USER:-${SSH_LOGIN%%@*}}
     exec ssh "${SSH_COMMON[@]}" \
       -o "ProxyJump=${SSH_LOGIN}" \
-      -L "${LOCAL}:127.0.0.1:${REMOTE}" \
+      -L "127.0.0.1:${LOCAL}:127.0.0.1:${REMOTE}" \
       "${COMPUTE_USER}@${SSH_COMPUTE_HOST}"
     ;;
   login-hop)
@@ -39,12 +41,12 @@ case "${MODE}" in
     echo "login-hop requires vLLM to listen on an address reachable from the login node." >&2
     echo "Prefer proxyjump mode when direct SSH to the compute node is allowed." >&2
     exec ssh "${SSH_COMMON[@]}" \
-      -L "${LOCAL}:${SSH_COMPUTE_HOST}:${REMOTE}" \
+      -L "127.0.0.1:${LOCAL}:${SSH_COMPUTE_HOST}:${REMOTE}" \
       "${SSH_LOGIN}"
     ;;
   login-local)
     exec ssh "${SSH_COMMON[@]}" \
-      -L "${LOCAL}:127.0.0.1:${REMOTE}" \
+      -L "127.0.0.1:${LOCAL}:127.0.0.1:${REMOTE}" \
       "${SSH_LOGIN}"
     ;;
   *)
