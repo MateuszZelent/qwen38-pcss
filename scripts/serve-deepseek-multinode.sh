@@ -14,7 +14,7 @@ source "${CONFIG_FILE}"
 
 # Tracked sbatch overrides take precedence over an older untracked PCSS config.
 MAX_MODEL_LEN=${PCSS_MAX_MODEL_LEN:-${MAX_MODEL_LEN:-1048576}}
-MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${MAX_NUM_BATCHED_TOKENS:-2048}}
+MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${MAX_NUM_BATCHED_TOKENS:-512}}
 
 # The upstream H200 profile performs a 16K-token dummy forward that needs
 # roughly 42 GiB of temporary memory. On 94 GiB H100s the weights already use
@@ -22,7 +22,7 @@ MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${MAX_NUM_BATCHED_TOKENS:-
 # speculative draft. This override intentionally also protects older local
 # env files that still contain the original H200-oriented values.
 if [[ "${H100_SAFE_PROFILE:-1}" == 1 ]]; then
-  MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${H100_SAFE_MAX_NUM_BATCHED_TOKENS:-2048}}
+  MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${H100_SAFE_MAX_NUM_BATCHED_TOKENS:-512}}
   SPECULATIVE_CONFIG=
 fi
 
