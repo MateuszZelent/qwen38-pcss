@@ -18,7 +18,7 @@
       "provider": "generic-chat-completion-api",
       "base_url": "http://127.0.0.1:18001/v1",
       "api_key": "local-vllm-no-auth",
-      "max_context_limit": 200000,
+      "max_context_limit": 1048576,
       "max_output_tokens": 32768,
       "no_image_support": true
     }

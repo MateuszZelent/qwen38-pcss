@@ -23,6 +23,8 @@ set -Eeuo pipefail
 
 PROJECT_DIR=/mnt/storage_3/home/kkingstoun/new_home/git/llm/qwen38-pcss
 export PCSS_CONFIG="${PROJECT_DIR}/config/deepseek-v4-pro.env"
+export PCSS_MAX_MODEL_LEN=${PCSS_MAX_MODEL_LEN:-1048576}
+export PCSS_MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-2048}
 
 mapfile -t NODES < <(scontrol show hostnames "${SLURM_JOB_NODELIST}")
 MASTER_ADDR=${NODES[0]}

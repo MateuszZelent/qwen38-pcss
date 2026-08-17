@@ -12,13 +12,17 @@ CONFIG_FILE=${PCSS_CONFIG:-"${PROJECT_DIR}/config/deepseek-v4-pro.env"}
 # shellcheck disable=SC1090
 source "${CONFIG_FILE}"
 
+# Tracked sbatch overrides take precedence over an older untracked PCSS config.
+MAX_MODEL_LEN=${PCSS_MAX_MODEL_LEN:-${MAX_MODEL_LEN:-1048576}}
+MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${MAX_NUM_BATCHED_TOKENS:-2048}}
+
 # The upstream H200 profile performs a 16K-token dummy forward that needs
 # roughly 42 GiB of temporary memory. On 94 GiB H100s the weights already use
 # about 82 GiB, so qualify the base model with a small profiling batch and no
 # speculative draft. This override intentionally also protects older local
 # env files that still contain the original H200-oriented values.
 if [[ "${H100_SAFE_PROFILE:-1}" == 1 ]]; then
-  MAX_NUM_BATCHED_TOKENS=${H100_SAFE_MAX_NUM_BATCHED_TOKENS:-512}
+  MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-${H100_SAFE_MAX_NUM_BATCHED_TOKENS:-2048}}
   SPECULATIVE_CONFIG=
 fi
 
@@ -91,7 +95,7 @@ VLLM_ARGS=(
   --kv-cache-dtype "${KV_CACHE_DTYPE:-fp8}"
   --block-size "${BLOCK_SIZE:-256}"
   --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION:-0.95}"
-  --max-model-len "${MAX_MODEL_LEN:-200000}"
+  --max-model-len "${MAX_MODEL_LEN:-1048576}"
   --max-num-seqs "${MAX_NUM_SEQS:-1}"
   --data-parallel-size "${DP_SIZE}"
   --data-parallel-size-local "${GPUS_LOCAL}"

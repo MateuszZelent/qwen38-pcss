@@ -280,8 +280,9 @@ bash scripts/setup-codex-router.sh install
 .\scripts\setup-codex-router.ps1
 ```
 
-DeepSeek pojawia się jako `DeepSeek-V4-Pro-0813 (PCSS 16xH100)` z limitem
-200000 tokenów. Jego obecność na liście nie wymaga, aby job był stale aktywny;
+DeepSeek pojawia się jako `DeepSeek-V4-Pro-0813 (PCSS 16xH100)` z pełnym
+limitem 1048576 tokenów. Jego obecność na liście nie wymaga, aby job był stale
+aktywny;
 próba użycia modelu bez działającego tunelu zwróci błąd połączenia, nie usuwa
 jednak GPT, Qwena ani historii zadań.
 
