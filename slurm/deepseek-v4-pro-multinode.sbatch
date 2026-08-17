@@ -27,7 +27,12 @@ export PCSS_MAX_MODEL_LEN=${PCSS_MAX_MODEL_LEN:-1048576}
 export PCSS_MAX_NUM_BATCHED_TOKENS=${PCSS_MAX_NUM_BATCHED_TOKENS:-512}
 
 mapfile -t NODES < <(scontrol show hostnames "${SLURM_JOB_NODELIST}")
-MASTER_ADDR=${NODES[0]}
+export PCSS_NETWORK_IFACE=${PCSS_NETWORK_IFACE:-ib0}
+MASTER_ADDR=$(ip -4 -o addr show dev "${PCSS_NETWORK_IFACE}" scope global | awk '$4 ~ /^10\.2\./ {sub(/\/.*/, "", $4); print $4; exit}')
+[[ -n "${MASTER_ADDR}" ]] || {
+  echo "ERROR: cannot determine ${PCSS_NETWORK_IFACE} IPv4 address on batch host" >&2
+  exit 7
+}
 export MASTER_ADDR
 
 echo "job=${SLURM_JOB_ID} nodes=${SLURM_NNODES} gpus=$((SLURM_NNODES * 4))"

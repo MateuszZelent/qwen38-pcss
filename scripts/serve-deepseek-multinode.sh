@@ -56,9 +56,10 @@ fi
 mkdir -p "${MODEL_ROOT}/.hf-cache" "${VLLM_HOME_ROOT}"
 
 NODE_HOST=$(hostname -f 2>/dev/null || hostname)
-NODE_IP=${VLLM_HOST_IP:-$(getent ahostsv4 "$(hostname -s)" | awk 'NR == 1 {print $1}')}
+NETWORK_IFACE=${PCSS_NETWORK_IFACE:-${NETWORK_IFACE:-ib0}}
+NODE_IP=${VLLM_HOST_IP:-$(ip -4 -o addr show dev "${NETWORK_IFACE}" scope global | awk '$4 ~ /^10\.2\./ {sub(/\/.*/, "", $4); print $4; exit}')}
 [[ -n "${NODE_IP}" ]] || {
-  echo "ERROR: cannot determine this node's IPv4 address; set VLLM_HOST_IP" >&2
+  echo "ERROR: cannot determine this node's ${NETWORK_IFACE} IPv4 address; set VLLM_HOST_IP" >&2
   exit 5
 }
 
@@ -127,7 +128,7 @@ fi
 [[ -n "${COMPILATION_CONFIG:-}" ]] && VLLM_ARGS+=(--compilation-config "${COMPILATION_CONFIG}")
 [[ "${DISABLE_FLASHINFER_AUTOTUNE:-1}" == 1 ]] && VLLM_ARGS+=(--no-enable-flashinfer-autotune)
 
-echo "node_id=${SLURM_NODEID} host=${NODE_HOST} ip=${NODE_IP} master=${MASTER_ADDR} dp=${DP_SIZE} local_dp=${GPUS_LOCAL} start_rank=${DP_START_RANK}" >&2
+echo "node_id=${SLURM_NODEID} host=${NODE_HOST} iface=${NETWORK_IFACE} ip=${NODE_IP} master=${MASTER_ADDR} dp=${DP_SIZE} local_dp=${GPUS_LOCAL} start_rank=${DP_START_RANK}" >&2
 echo "memory_profile=h100-safe max_num_batched_tokens=${MAX_NUM_BATCHED_TOKENS:-unset} speculative=$([[ -n "${SPECULATIVE_CONFIG:-}" ]] && echo enabled || echo disabled)" >&2
 echo "jit_cache=${LOCAL_JIT_ROOT} filesystem=${TMP_FS} tilelang_cache=${LOCAL_JIT_ROOT}/tilelang/cache" >&2
 nvidia-smi -L
@@ -149,7 +150,8 @@ for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_TOKENIZERS_PARALLELISM=false"
   export "${prefix}_VLLM_HOST_IP=${NODE_IP}"
   export "${prefix}_NCCL_DEBUG=${NCCL_DEBUG:-INFO}"
-  [[ -n "${NCCL_SOCKET_IFNAME:-}" ]] && export "${prefix}_NCCL_SOCKET_IFNAME=${NCCL_SOCKET_IFNAME}"
+  export "${prefix}_GLOO_SOCKET_IFNAME=${GLOO_SOCKET_IFNAME:-${NETWORK_IFACE}}"
+  export "${prefix}_NCCL_SOCKET_IFNAME=${NCCL_SOCKET_IFNAME:-${NETWORK_IFACE}}"
   [[ -n "${NCCL_IB_HCA:-}" ]] && export "${prefix}_NCCL_IB_HCA=${NCCL_IB_HCA}"
   [[ -n "${HF_TOKEN:-}" ]] && export "${prefix}_HF_TOKEN=${HF_TOKEN}"
 done
