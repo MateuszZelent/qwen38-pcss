@@ -41,14 +41,14 @@ PY
 from packaging.version import Version
 import torch
 import vllm
-from vllm.parser.kimi_k3 import KimiK3Parser
+from vllm.tool_parsers.kimi_k3_tool_parser import KimiK3ToolParser
 from vllm.reasoning.kimi_k3_reasoning_parser import KimiK3ReasoningParser
 
 # The purpose-built kimi-k3 image reports an integration-branch version such
 # as 0.1.dev19262+..., which is not comparable with the public 0.27.1 release.
 # Import both K3 parsers to verify the required integration directly.
 assert torch.version.cuda and Version(torch.version.cuda) >= Version("13.0")
-assert KimiK3Parser is not None and KimiK3ReasoningParser is not None
+assert KimiK3ToolParser is not None and KimiK3ReasoningParser is not None
 print("Kimi-K3 runtime OK:", vllm.__version__, "CUDA", torch.version.cuda)
 PY
 
