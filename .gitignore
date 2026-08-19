@@ -1,5 +1,6 @@
 config/pcss.env
 config/deepseek-v4-pro.env
+config/kimi-k3.env
 .apptainer-tmp/
 .apptainer-cache/
 .hf-cache/
@@ -9,6 +10,7 @@ Qwen3.8-27B/
 qwen38-vllm.sif
 qwen38-vllm-*.log
 deepseek-v4-pro-*.log
+kimi-k3-*.log
 *.sif
 *.img
 *.sandbox/

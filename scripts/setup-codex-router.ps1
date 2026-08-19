@@ -4,6 +4,7 @@ param(
     [string]$Action = 'Install',
     [string]$VllmBaseUrl = 'http://127.0.0.1:18000/v1',
     [string]$DeepSeekBaseUrl = 'http://127.0.0.1:18001/v1',
+    [string]$KimiBaseUrl = 'http://127.0.0.1:18002/v1',
     [int]$RouterPort = 8765,
     [switch]$SkipDesktopPatch
 )
@@ -81,6 +82,8 @@ foreach ($model in $settings.models) {
         $model.base_url = $VllmBaseUrl.TrimEnd('/')
     } elseif ($model.slug -eq 'deepseek-v4-pro') {
         $model.base_url = $DeepSeekBaseUrl.TrimEnd('/')
+    } elseif ($model.slug -eq 'kimi-k3') {
+        $model.base_url = $KimiBaseUrl.TrimEnd('/')
     }
 }
 $settings | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 $SettingsPath
@@ -100,4 +103,4 @@ if (-not $SkipDesktopPatch) {
 }
 
 Write-Host "Router dziala na http://127.0.0.1:$RouterPort/v1"
-Write-Host 'Uruchom ponownie Codex Desktop. GPT, Qwen i DeepSeek powinny byc dostepne z jednej listy.'
+Write-Host 'Uruchom ponownie Codex Desktop. GPT, Qwen, DeepSeek i Kimi powinny byc dostepne z jednej listy.'

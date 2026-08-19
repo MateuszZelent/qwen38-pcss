@@ -1,0 +1,50 @@
+Bootstrap: docker
+From: vllm/vllm-openai:kimi-k3
+
+# Official Kimi-K3 image: vLLM >= 0.27.1, CUDA 13.0. The compute-node
+# NVIDIA driver must be r580 or newer.
+
+%labels
+    APP_NAME kimi-k3-vllm
+    MODEL_ID moonshotai/Kimi-K3
+    API OpenAI
+    RUNTIME vLLM
+    GPU_INTERFACE Apptainer-nv
+
+%environment
+    export PYTHONUNBUFFERED=1
+    export TOKENIZERS_PARALLELISM=false
+    export HF_HUB_DISABLE_TELEMETRY=1
+    export VLLM_USAGE_SOURCE=production
+    export VLLM_WORKER_MULTIPROC_METHOD=spawn
+    export HF_HOME=${HF_HOME:-/models/.cache}
+    export VLLM_ENGINE_READY_TIMEOUT_S=3600
+    export VLLM_USE_V2_MODEL_RUNNER=1
+    export VLLM_USE_RUST_FRONTEND=1
+    export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+%post
+    set -eux
+    mkdir -p /models /workspace /opt/kimi-k3
+    python3 - <<'PY'
+import importlib.metadata
+import torch
+import vllm
+print("vLLM:", vllm.__version__)
+print("PyTorch:", torch.__version__)
+print("CUDA compiled:", torch.version.cuda)
+print("huggingface-hub:", importlib.metadata.version("huggingface-hub"))
+PY
+
+%test
+    python3 - <<'PY'
+from packaging.version import Version
+import torch
+import vllm
+assert Version(vllm.__version__.split("+")[0]) >= Version("0.27.1")
+assert torch.version.cuda and Version(torch.version.cuda) >= Version("13.0")
+print("Kimi-K3 runtime OK:", vllm.__version__, "CUDA", torch.version.cuda)
+PY
+
+%runscript
+    exec vllm serve "$@"

@@ -175,8 +175,14 @@ if [[ -z "$(listener_pids)" ]]; then
 fi
 
 info "4/8: konfiguracja i restart codex-shim"
-PCSS_DEEPSEEK_BASE_URL="http://127.0.0.1:${LOCAL_PORT}/v1" \
-  bash "${PROJECT_DIR}/scripts/setup-codex-router.sh" install >/dev/null
+case "${MODEL_SLUG}" in
+  qwen3.8-27b) ROUTER_URL_ENV=PCSS_VLLM_BASE_URL ;;
+  deepseek-v4-pro) ROUTER_URL_ENV=PCSS_DEEPSEEK_BASE_URL ;;
+  kimi-k3) ROUTER_URL_ENV=PCSS_KIMI_BASE_URL ;;
+  *) die "brak mapowania endpointu routera dla ${MODEL_SLUG}" ;;
+esac
+export "${ROUTER_URL_ENV}=http://127.0.0.1:${LOCAL_PORT}/v1"
+bash "${PROJECT_DIR}/scripts/setup-codex-router.sh" install >/dev/null
 shim restart >/dev/null
 shim model use "${MODEL_SLUG}" >/dev/null
 curl -fsS --max-time 10 "http://127.0.0.1:${SHIM_PORT}/health" >/dev/null \

@@ -13,8 +13,12 @@ case "${IMAGE_PROFILE}" in
     DEFAULT_DEF="${PROJECT_DIR}/apptainer/deepseek-v4-vllm.def"
     DEFAULT_OUTPUT="${PROJECT_DIR}/deepseek-v4-vllm.sif"
     ;;
+  kimi-k3)
+    DEFAULT_DEF="${PROJECT_DIR}/apptainer/kimi-k3-vllm.def"
+    DEFAULT_OUTPUT="${PROJECT_DIR}/kimi-k3-vllm.sif"
+    ;;
   *)
-    echo "ERROR: IMAGE_PROFILE must be qwen38 or deepseek-v4-pro" >&2
+    echo "ERROR: IMAGE_PROFILE must be qwen38, deepseek-v4-pro, or kimi-k3" >&2
     exit 4
     ;;
 esac

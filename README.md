@@ -311,6 +311,50 @@ przejść na osiem węzłów.
 Pierwsze cztery punkty potwierdzają uruchomienie. Dopiero punkt piąty
 potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
 
+
+## Kimi-K3 na 8 wezłach PCSS
+
+Kimi-K3 ma 2.8T parametrów, natywne wagi MXFP4 (około 1.68 TB) i kontekst
+1,048,576 tokenów. Oficjalny profil vLLM dla H100 wymaga co najmniej 32 GPU.
+Ponieważ węzeł PCSS ma 4xH100, profil startowy rezerwuje 8 węzłów. Pierwsza
+kwalifikacja używa zalecanego dla Hoppera kontekstu 32768, Marlin, FLASHMLA,
+Expert Parallel oraz DeepEP v2 przez InfiniBand. Profil jest tekstowy
+(`--language-model-only`) dla Codexa.
+
+Wymagany jest sterownik NVIDIA r580+; oficjalny obraz Kimi zawiera CUDA 13:
+
+```bash
+cp config/kimi-k3.env.example config/kimi-k3.env
+${EDITOR:-vi} config/kimi-k3.env
+
+APPTAINER_BUILD_MODE=admin-wrapper \
+  IMAGE_PROFILE=kimi-k3 \
+  bash scripts/build-image.sh
+
+PCSS_CONFIG="$PWD/config/kimi-k3.env" bash scripts/download-model.sh
+sbatch slurm/kimi-k3-multinode.sbatch
+```
+
+Checkpoint wymaga około 1.7 TB wolnej przestrzeni we współdzielonym
+`MODEL_ROOT`. Lokalne NVMe (`--tmp=500G`) przechowuje wyłącznie cache JIT
+każdego węzła. Nie kopiuj pełnych wag do `TMPDIR`.
+
+Po pojawieniu się `Application startup complete` odczytaj `api_node` z logu
+i uruchom w WSL:
+
+```bash
+./scripts/connect-model-codex.sh GPU_NODE kimi-k3
+```
+
+Skrypt zestawi `GPU_NODE:8002 -> 127.0.0.1:18002`, wybierze Kimi w shimie i
+wykona test vLLM oraz Responses API. DSpark jest domyślnie wyłączony. Włącz go
+dopiero po stabilnym starcie 32-GPU, poprawnym tool callu i teście Codexa.
+
+Profil 32k jest kwalifikacją H100, a nie deklaracją pełnej gotowości 1M.
+Zwiększaj `MAX_MODEL_LEN` stopniowo po pomiarze wolnej pamięci KV i czasu
+prefill. Dla Kimi należy zachowywać w historii wieloturowej kompletne wiadomości
+asystenta, w tym `reasoning_content` i `tool_calls`.
+
 ## Źródła techniczne
 
 - [vLLM + Codex](https://docs.vllm.ai/en/latest/serving/integrations/codex/)
@@ -318,6 +362,8 @@ potwierdza, że parser tool calls i Responses API są zgodne z Codexem.
 - [Apptainer GPU support](https://apptainer.org/docs/user/main/gpu.html)
 - [Apptainer definition files](https://apptainer.org/user-docs/master/definition_files.html)
 - [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B)
+- [Kimi-K3 recipe](https://recipes.vllm.ai/moonshotai/Kimi-K3)
+- [Kimi-K3 model](https://huggingface.co/moonshotai/Kimi-K3)
 - [codex-shim](https://github.com/0xSero/codex-shim) — router GPT/BYOK (MIT).
 - [codex-deepseek-bridge](https://github.com/JetXu-LLM/codex-deepseek-bridge)
   — źródło odwracalnej poprawki Desktop (Apache-2.0).
