@@ -10,6 +10,8 @@ ACTION=${1:-install}
 QWEN_BASE_URL=${PCSS_VLLM_BASE_URL:-http://127.0.0.1:18000/v1}
 DEEPSEEK_BASE_URL=${PCSS_DEEPSEEK_BASE_URL:-http://127.0.0.1:18001/v1}
 KIMI_BASE_URL=${PCSS_KIMI_BASE_URL:-http://127.0.0.1:18002/v1}
+ORNITH_BASE_URL=${PCSS_ORNITH_BASE_URL:-http://127.0.0.1:18003/v1}
+ORNITH397_BASE_URL=${PCSS_ORNITH397_BASE_URL:-http://127.0.0.1:18004/v1}
 ROUTER_PORT=${CODEX_ROUTER_PORT:-8765}
 PYTHON_BIN=${CODEX_ROUTER_PYTHON:-python3}
 
@@ -35,17 +37,21 @@ case "${ACTION}" in
       "${SETTINGS_PATH}" \
       "${QWEN_BASE_URL%/}" \
       "${DEEPSEEK_BASE_URL%/}" \
-      "${KIMI_BASE_URL%/}" <<'PY'
+      "${KIMI_BASE_URL%/}" \
+      "${ORNITH_BASE_URL%/}" \
+      "${ORNITH397_BASE_URL%/}" <<'PY'
 import json
 import sys
 
-template, output, qwen_url, deepseek_url, kimi_url = sys.argv[1:]
+template, output, qwen_url, deepseek_url, kimi_url, ornith_url, ornith397_url = sys.argv[1:]
 with open(template, encoding="utf-8") as handle:
     settings = json.load(handle)
 urls = {
     "qwen3.8-27b": qwen_url,
     "deepseek-v4-pro": deepseek_url,
     "kimi-k3": kimi_url,
+    "ornith-1.5-35b": ornith_url,
+    "ornith-1.5-397b": ornith397_url,
 }
 for model in settings["models"]:
     if model.get("slug") in urls:

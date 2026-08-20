@@ -1,0 +1,31 @@
+Bootstrap: docker
+From: ollama/ollama:latest
+
+%labels
+    APP_NAME ornith15-ollama
+    MODEL_FAMILY ornith-1.5
+    API OpenAI-Compatible
+    RUNTIME Ollama
+    GPU_INTERFACE Apptainer-nv
+
+%environment
+    export OLLAMA_HOST=${OLLAMA_HOST:-127.0.0.1:8003}
+    export OLLAMA_MODELS=${OLLAMA_MODELS:-/ollama/models}
+    export OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH:-262144}
+    export OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION:-1}
+    export OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE:-q8_0}
+    export OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:--1}
+    export OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
+    export OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}
+    export OLLAMA_SCHED_SPREAD=${OLLAMA_SCHED_SPREAD:-0}
+
+%post
+    set -eux
+    mkdir -p /ollama/models /ollama/home /tmp/ollama
+    ollama --version
+
+%test
+    ollama --version
+
+%runscript
+    exec ollama serve

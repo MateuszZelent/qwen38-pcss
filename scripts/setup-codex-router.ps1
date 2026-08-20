@@ -5,6 +5,8 @@ param(
     [string]$VllmBaseUrl = 'http://127.0.0.1:18000/v1',
     [string]$DeepSeekBaseUrl = 'http://127.0.0.1:18001/v1',
     [string]$KimiBaseUrl = 'http://127.0.0.1:18002/v1',
+    [string]$OrnithBaseUrl = 'http://127.0.0.1:18003/v1',
+    [string]$Ornith397BaseUrl = 'http://127.0.0.1:18004/v1',
     [int]$RouterPort = 8765,
     [switch]$SkipDesktopPatch
 )
@@ -84,6 +86,10 @@ foreach ($model in $settings.models) {
         $model.base_url = $DeepSeekBaseUrl.TrimEnd('/')
     } elseif ($model.slug -eq 'kimi-k3') {
         $model.base_url = $KimiBaseUrl.TrimEnd('/')
+    } elseif ($model.slug -eq 'ornith-1.5-35b') {
+        $model.base_url = $OrnithBaseUrl.TrimEnd('/')
+    } elseif ($model.slug -eq 'ornith-1.5-397b') {
+        $model.base_url = $Ornith397BaseUrl.TrimEnd('/')
     }
 }
 $settings | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 $SettingsPath
@@ -103,4 +109,4 @@ if (-not $SkipDesktopPatch) {
 }
 
 Write-Host "Router dziala na http://127.0.0.1:$RouterPort/v1"
-Write-Host 'Uruchom ponownie Codex Desktop. GPT, Qwen, DeepSeek i Kimi powinny byc dostepne z jednej listy.'
+Write-Host 'Uruchom ponownie Codex Desktop. GPT, Qwen, DeepSeek, Kimi i Ornith powinny byc dostepne z jednej listy.'

@@ -355,6 +355,54 @@ Zwiększaj `MAX_MODEL_LEN` stopniowo po pomiarze wolnej pamięci KV i czasu
 prefill. Dla Kimi należy zachowywać w historii wieloturowej kompletne wiadomości
 asystenta, w tym `reasoning_content` i `tool_calls`.
 
+## Ornith 1.5: profile 1xH100 i 4xH100
+
+Repo udostępnia dwa niezależne profile oficjalnych quantów Ollama z kontekstem
+256K i wejściem tekstowym/obrazowym:
+
+- `ornith-1.5:35b` (35B-A3B, około 23 GB) na jednej H100, port 8003;
+- `ornith-1.5:397b` (około 242 GB) na czterech H100, port 8004.
+
+Oba profile używają jednego obrazu:
+
+```bash
+APPTAINER_BUILD_MODE=admin-wrapper \
+  IMAGE_PROFILE=ornith15 \
+  bash scripts/build-image.sh
+```
+
+Przygotuj konfiguracje. Katalogi `MODEL_ROOT` są trwałym magazynem Ollama;
+pierwszy job pobierze odpowiednio około 23 GB lub 242 GB:
+
+```bash
+cp config/ornith15.env.example config/ornith15.env
+cp config/ornith15-397b.env.example config/ornith15-397b.env
+```
+
+Uruchom wybrany wariant:
+
+```bash
+# 35B-A3B, jedna H100
+sbatch slurm/ornith15-ollama.sbatch
+
+# 397B, cztery H100
+sbatch slurm/ornith15-397b-ollama.sbatch
+```
+
+Po komunikacie `Ornith API ready` połącz model z Codexem:
+
+```bash
+./scripts/connect-model-codex.sh GPU_NODE ornith-1.5-35b
+# albo
+./scripts/connect-model-codex.sh GPU_NODE ornith-1.5-397b
+```
+
+Helper tworzy tunel, regeneruje katalog shima i testuje bezpośrednie Chat
+Completions, Responses API oraz opcjonalnie `codex exec`. Flash Attention i
+8-bitowy KV cache są włączone, aby pełne 256K zużywało mniej VRAM. W logu
+`ollama ps` musi pokazać GPU jako procesor; offload do CPU nie kwalifikuje
+profilu jako gotowego.
+
 ## Źródła techniczne
 
 - [vLLM + Codex](https://docs.vllm.ai/en/latest/serving/integrations/codex/)
@@ -364,6 +412,8 @@ asystenta, w tym `reasoning_content` i `tool_calls`.
 - [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B)
 - [Kimi-K3 recipe](https://recipes.vllm.ai/moonshotai/Kimi-K3)
 - [Kimi-K3 model](https://huggingface.co/moonshotai/Kimi-K3)
+- [Ornith 1.5](https://ollama.com/library/ornith-1.5)
+- [Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility)
 - [codex-shim](https://github.com/0xSero/codex-shim) — router GPT/BYOK (MIT).
 - [codex-deepseek-bridge](https://github.com/JetXu-LLM/codex-deepseek-bridge)
   — źródło odwracalnej poprawki Desktop (Apache-2.0).

@@ -32,6 +32,28 @@
       "max_context_limit": 32768,
       "max_output_tokens": 32768,
       "no_image_support": true
+    },
+    {
+      "model": "ornith-1.5:35b",
+      "slug": "ornith-1.5-35b",
+      "display_name": "Ornith-1.5-35B-A3B (PCSS 1xH100)",
+      "provider": "generic-chat-completion-api",
+      "base_url": "http://127.0.0.1:18003/v1",
+      "api_key": "local-ollama-no-auth",
+      "max_context_limit": 262144,
+      "max_output_tokens": 32768,
+      "no_image_support": false
+    },
+    {
+      "model": "ornith-1.5:397b",
+      "slug": "ornith-1.5-397b",
+      "display_name": "Ornith-1.5-397B (PCSS 4xH100)",
+      "provider": "generic-chat-completion-api",
+      "base_url": "http://127.0.0.1:18004/v1",
+      "api_key": "local-ollama-no-auth",
+      "max_context_limit": 262144,
+      "max_output_tokens": 32768,
+      "no_image_support": false
     }
   ]
 }

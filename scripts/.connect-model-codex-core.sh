@@ -15,6 +15,8 @@ REMOTE_PORT=${DEEPSEEK_REMOTE_PORT:-8001}
 LOCAL_PORT=${DEEPSEEK_LOCAL_PORT:-18001}
 SHIM_PORT=${CODEX_ROUTER_PORT:-8765}
 MODEL_SLUG=${DEEPSEEK_MODEL_SLUG:-deepseek-v4-pro}
+HEALTH_PATH=${MODEL_HEALTH_PATH:-/health}
+UPSTREAM_MODEL_ID=${UPSTREAM_MODEL_ID:-${MODEL_SLUG}}
 
 SSH_OPTS=(
   -o BatchMode=yes
@@ -57,7 +59,7 @@ show_status() {
     pgrep -af "ssh.*127.0.0.1:${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT}" || true
   fi
   info "Health"
-  curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}/health" >/dev/null \
+  curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}${HEALTH_PATH}" >/dev/null \
     && ok "vLLM tunnel" || warn "vLLM tunnel niedostępny"
   curl -fsS --max-time 5 "http://127.0.0.1:${SHIM_PORT}/health" \
     && printf '\n' || warn "codex-shim niedostępny"
@@ -115,27 +117,27 @@ mkdir -p "${RUNTIME_DIR}"
 
 info "1/8: zdalne API ${NODE}:${REMOTE_PORT}"
 REMOTE_HEALTH=$(ssh "${SSH_OPTS[@]}" -J "${JUMP_HOST}" "${COMPUTE_USER}@${NODE}" \
-  curl -fsS -i --max-time 15 "http://127.0.0.1:${REMOTE_PORT}/health") \
+  curl -fsS -i --max-time 15 "http://127.0.0.1:${REMOTE_PORT}${HEALTH_PATH}") \
   || die "API nie działa na ${NODE}:${REMOTE_PORT}; sprawdź log joba i czy ${NODE} jest pierwszym węzłem"
-grep -q '200 OK' <<<"${REMOTE_HEALTH}" || die "zdalny /health nie zwrócił HTTP 200"
-ok "zdalny /health"
+grep -q '200 OK' <<<"${REMOTE_HEALTH}" || die "zdalny ${HEALTH_PATH} nie zwrócił HTTP 200"
+ok "zdalny ${HEALTH_PATH}"
 
 REMOTE_MODELS=$(ssh "${SSH_OPTS[@]}" -J "${JUMP_HOST}" "${COMPUTE_USER}@${NODE}" \
   curl -fsS --max-time 15 "http://127.0.0.1:${REMOTE_PORT}/v1/models") \
   || die "zdalny /v1/models jest niedostępny"
-REMOTE_MODELS="${REMOTE_MODELS}" MODEL_SLUG="${MODEL_SLUG}" python3 - <<'PY'
+REMOTE_MODELS="${REMOTE_MODELS}" UPSTREAM_MODEL_ID="${UPSTREAM_MODEL_ID}" python3 - <<'PY'
 import json, os
 payload = json.loads(os.environ["REMOTE_MODELS"])
 rows = payload.get("data", [])
-target = next((row for row in rows if row.get("id") == os.environ["MODEL_SLUG"]), None)
+target = next((row for row in rows if row.get("id") == os.environ["UPSTREAM_MODEL_ID"]), None)
 if target is None:
-    raise SystemExit(f"ERROR: brak modelu {os.environ['MODEL_SLUG']} w /v1/models")
+    raise SystemExit(f"ERROR: brak modelu {os.environ['UPSTREAM_MODEL_ID']} w /v1/models")
 print(f"OK: model={target['id']} max_model_len={target.get('max_model_len', 'unknown')}")
 PY
 
 info "2/8: przygotowanie portu ${LOCAL_PORT}"
 if [[ -n "$(listener_pids)" ]]; then
-  if curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}/health" >/dev/null 2>&1 \
+  if curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}${HEALTH_PATH}" >/dev/null 2>&1 \
       && pgrep -af "ssh.*${NODE}.*127.0.0.1:${LOCAL_PORT}:127.0.0.1:${REMOTE_PORT}" >/dev/null; then
     ok "istniejący tunel do ${NODE} jest zdrowy"
   else
@@ -160,7 +162,7 @@ if [[ -z "$(listener_pids)" ]]; then
   disown "${tunnel_pid}" 2>/dev/null || true
 
   for _ in {1..40}; do
-    if curl -fsS --max-time 3 "http://127.0.0.1:${LOCAL_PORT}/health" >/dev/null 2>&1; then
+    if curl -fsS --max-time 3 "http://127.0.0.1:${LOCAL_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
       ok "tunel PID=${tunnel_pid}"
       break
     fi
@@ -170,7 +172,7 @@ if [[ -z "$(listener_pids)" ]]; then
     }
     sleep 0.5
   done
-  curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}/health" >/dev/null \
+  curl -fsS --max-time 5 "http://127.0.0.1:${LOCAL_PORT}${HEALTH_PATH}" >/dev/null \
     || die "tunel istnieje, ale lokalny /health nie działa; log: ${TUNNEL_LOG}"
 fi
 
@@ -179,6 +181,8 @@ case "${MODEL_SLUG}" in
   qwen3.8-27b) ROUTER_URL_ENV=PCSS_VLLM_BASE_URL ;;
   deepseek-v4-pro) ROUTER_URL_ENV=PCSS_DEEPSEEK_BASE_URL ;;
   kimi-k3) ROUTER_URL_ENV=PCSS_KIMI_BASE_URL ;;
+  ornith-1.5-35b) ROUTER_URL_ENV=PCSS_ORNITH_BASE_URL ;;
+  ornith-1.5-397b) ROUTER_URL_ENV=PCSS_ORNITH397_BASE_URL ;;
   *) die "brak mapowania endpointu routera dla ${MODEL_SLUG}" ;;
 esac
 export "${ROUTER_URL_ENV}=http://127.0.0.1:${LOCAL_PORT}/v1"
@@ -202,7 +206,7 @@ info "6/8: bezpośrednia generacja vLLM"
 direct_body=$(mktemp)
 shim_body=$(mktemp)
 trap 'rm -f -- "${direct_body:-}" "${shim_body:-}"' EXIT
-printf '{"model":"%s","messages":[{"role":"user","content":"Return exactly DIRECT_OK and nothing else."}],"max_tokens":256,"temperature":0}' "${MODEL_SLUG}" >"${direct_body}"
+printf '{"model":"%s","messages":[{"role":"user","content":"Return exactly DIRECT_OK and nothing else."}],"max_tokens":256,"temperature":0}' "${UPSTREAM_MODEL_ID}" >"${direct_body}"
 DIRECT_RESPONSE=$(curl -fsS --max-time 180 -H 'Content-Type: application/json' \
   --data-binary "@${direct_body}" "http://127.0.0.1:${LOCAL_PORT}/v1/chat/completions") \
   || die "bezpośrednia generacja vLLM nie powiodła się"
