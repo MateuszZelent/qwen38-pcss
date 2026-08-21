@@ -45,7 +45,7 @@ for prefix in APPTAINERENV SINGULARITYENV; do
   export "${prefix}_OLLAMA_NUM_PARALLEL=${NUM_PARALLEL:-1}"
   export "${prefix}_OLLAMA_SCHED_SPREAD=${SCHED_SPREAD:-0}"
   export "${prefix}_OLLAMA_TMPDIR=/tmp/ollama"
-fi
+done
 
 container=("${RUNTIME_BIN}" exec --nv
   --bind "${MODEL_ROOT}:/ollama"
